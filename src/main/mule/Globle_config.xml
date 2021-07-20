@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:file="http://www.mulesoft.org/schema/mule/file"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd">
+	<file:config name="File_Config" doc:name="File Config" doc:id="4db84ef6-bcb2-4641-bee9-aa7beeeebc61" />
+	<http:request-config name="HTTP_Auth_Request_configuration" doc:name="HTTP Request configuration" doc:id="f0d574f3-3d76-46fc-830f-396acc402c35" >
+		<http:request-connection host="${http.auth.host}" protocol="HTTPS"/>
+	</http:request-config>
+	<configuration-properties doc:name="Configuration properties" doc:id="f023108b-4c7d-41cd-be6a-544ced4bca29" file="application.properties" />
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="f7c05aed-952d-4f30-ba0b-18d9ea6126a7" responseTimeout="500000">
+		<http:request-connection host="${http.client.host}" connectionIdleTimeout="999999999" protocol="HTTPS"/>
+	</http:request-config>
+</mule>

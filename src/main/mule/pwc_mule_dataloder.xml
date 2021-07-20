@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd 
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd">
+	<flow name="pwc_mule_dataloderFlow" doc:id="a085e1ab-78bd-44d0-aa8f-07c75b43c325" >
+		<scheduler doc:name="Scheduler" doc:id="56f6a1c7-9b05-4f76-9ee0-906f6abf87da" >
+			<scheduling-strategy >
+				<fixed-frequency frequency="1" timeUnit="DAYS"/>
+			</scheduling-strategy>
+		</scheduler>
+		<logger level="INFO" doc:name="Logger" doc:id="b618a688-f054-4032-95ca-50bc8945561f" message="Start"/>
+		<file:read doc:id="fcd61ea6-8da8-43d5-a1ff-336f142488d3" config-ref="File_Config" path="C:\Users\anjanau\Documents\Mulefile\testPro\LargeFiles_FileList1.csv"/>
+		<logger level="INFO" doc:name="Logger" doc:id="17cda54c-6daf-43ec-a8cf-3e8ff396ee65" message="File read sucess"/>
+		<foreach doc:name="For Each" doc:id="004380e2-044f-4d94-bf34-15722922ae93">
+		<ee:transform doc:name="Transform Message" doc:id="bcce66d1-4b94-45dc-a1c2-f6a2c8178ed3">
+			<ee:message>
+			</ee:message>
+			<ee:variables>
+				<ee:set-variable variableName="fpath"><![CDATA[%dw 2.0
+output application/java
+---
+payload.Pathonclient]]></ee:set-variable>
+				<ee:set-variable variableName="title"><![CDATA[%dw 2.0
+output application/java
+---
+payload.title]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+			<flow-ref doc:name="Flow Reference" doc:id="eeb2d028-d3cc-42b0-90a0-a065bd68d951" name="authFlow"/>
+			<flow-ref doc:name="Flow Reference" doc:id="4988afd4-d311-4e50-8ad9-a29cbd6b1112" name="pwc_mule_dataloderFileReadFlow" />
+			<http:request method="POST" doc:name="Request" doc:id="d8f7e2dd-40fc-415b-a7bc-0e5aa7849761" config-ref="HTTP_Request_configuration" path="/services/data/v52.0/sobjects/ContentVersion">
+				<http:headers ><![CDATA[#[output application/java
+---
+{
+	"Authorization" : vars.authToken,
+	"Content-Type" : "multipart/form-data; boundary=boundary_string"
+}]]]></http:headers>
+			</http:request>
+			<logger level="INFO" doc:name="Logger" doc:id="1f91127e-2f4b-4302-9fd8-db7baa33480b" message="#[payload]"/>
+			<logger level="INFO" doc:name="Logger" doc:id="b8e7b02f-2b41-4f63-859b-59c8faae6b5b" message="End - Sucess"/>
+		</foreach>
+	</flow>
+	<flow name="pwc_mule_dataloderFileReadFlow" doc:id="63d94604-2d20-4172-a7e1-24bf4a3e921b" >
+		<file:read doc:name="Read" doc:id="db44f354-60f6-4f97-be80-398c70764820" path="#[vars.fpath[0]]" config-ref="File_Config"/>
+		<ee:transform doc:name="Transform Message" doc:id="81e5f5bc-bf3d-46d5-9587-e79fa6999254" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+import toBase64 from dw::core::Binaries
+output application/java
+---
+toBase64(payload)]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="fileTitle" ><![CDATA[%dw 2.0
+output application/java
+---
+vars.title[0]]]></ee:set-variable>
+				<ee:set-variable variableName="filePath" ><![CDATA[%dw 2.0
+output application/java
+---
+vars.fpath[0]]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<ee:transform doc:name="Transform Message" doc:id="12dd9beb-fafc-492c-8e6a-6a228735ea14" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+import * from dw::core::Binaries
+output multipart/form-data
+boundary = 'boundary_string'
+---
+{
+	parts: {
+		entity_content: {
+			headers: {
+				"Content-Disposition": {
+					"name": "entity_content"
+				},
+				"Content-Type": "application/json"
+			},
+			content: {
+				"Title": vars.fileTitle,
+				"PathOnClient": vars.filePath
+			}
+		},
+		VersionData: {
+			headers: {
+				"Content-Disposition": {
+					"name": "VersionData",
+					"filename": vars.fileTitle
+				},
+				"Content-Type": "application/octet-stream"
+			},
+			content: fromBase64(payload)
+		}
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="authFlow" doc:id="52956684-79af-40b0-9ef7-d6c5956abc05" >
+		<logger level="INFO" doc:name="Logger" doc:id="ed3427c6-32f8-47b0-958b-73d5e2e450da" message="auth request"/>
+		<http:request method="POST" doc:name="Request" doc:id="afc2f45f-e3f2-4965-a47e-3767a5a5b1d8" config-ref="HTTP_Auth_Request_configuration" path="/services/oauth2/token">
+			<http:body ><![CDATA[#[%dw 2.0
+output application/x-www-form-urlencoded
+---
+{
+"redirect_uri":"http://localhost:8082/oauth2callback",
+"client_secret":"700443D2B07E3FBB880747516A159E8F4246B9F8F09F4201439B173B35103332",
+"grant_type":"password",
+"client_id":"3MVG9fe4g9fhX0E78O77bYJc3Iuo9nZTgDQ1s7xEiQH8L.d_cV1P_x5NE8N4PKeremzEPpuVApfT3kAmheGqz",
+"code":"6Cel800D5g0000050AHx8885g000008bbP1d5yw5Ca8KxyBzsZQrY7QZdYUKoPk4Lf0araY8TdZ0fzBI2DNSbY9VmGjDxfW3tVsQSLrEbLK",
+"username":"hunanjana@gmail.com",
+"password":"1qaz!QAZvhfwL4k56Cq4gWl5KKPAmKXso"
+}]]]></http:body>
+			<http:headers ><![CDATA[#[output application/java
+---
+{
+	"Content-type" : "application/x-www-form-urlencoded"
+}]]]></http:headers>
+		</http:request>
+		<logger level="INFO" doc:name="Logger" doc:id="774add3c-7a89-4318-b86f-5876c84500f2" message="Auth sucess"/>
+		<set-variable value="#['Bearer '++ payload.access_token]" doc:name="Set Variable" doc:id="c92be197-49d8-499e-9659-2ba169f9b4bc" variableName="authToken"/>
+	</flow>
+</mule>
