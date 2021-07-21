@@ -15,6 +15,7 @@ http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/fil
 			</scheduling-strategy>
 		</scheduler>
 		<logger level="INFO" doc:name="Logger" doc:id="b618a688-f054-4032-95ca-50bc8945561f" message="Start"/>
+		<flow-ref doc:name="Flow Reference" doc:id="eeb2d028-d3cc-42b0-90a0-a065bd68d951" name="authFlow" />
 		<file:read doc:id="fcd61ea6-8da8-43d5-a1ff-336f142488d3" config-ref="File_Config" path="C:\Users\anjanau\Documents\Mulefile\testPro\LargeFiles_FileList1.csv"/>
 		<logger level="INFO" doc:name="Logger" doc:id="17cda54c-6daf-43ec-a8cf-3e8ff396ee65" message="File read sucess"/>
 		<foreach doc:name="For Each" doc:id="004380e2-044f-4d94-bf34-15722922ae93">
@@ -32,7 +33,6 @@ output application/java
 payload.title]]></ee:set-variable>
 			</ee:variables>
 		</ee:transform>
-			<flow-ref doc:name="Flow Reference" doc:id="eeb2d028-d3cc-42b0-90a0-a065bd68d951" name="authFlow"/>
 			<flow-ref doc:name="Flow Reference" doc:id="4988afd4-d311-4e50-8ad9-a29cbd6b1112" name="pwc_mule_dataloderFileReadFlow" />
 			<http:request method="POST" doc:name="Request" doc:id="d8f7e2dd-40fc-415b-a7bc-0e5aa7849761" config-ref="HTTP_Request_configuration" path="/services/data/v52.0/sobjects/ContentVersion">
 				<http:headers ><![CDATA[#[output application/java
@@ -48,29 +48,9 @@ payload.title]]></ee:set-variable>
 	</flow>
 	<flow name="pwc_mule_dataloderFileReadFlow" doc:id="63d94604-2d20-4172-a7e1-24bf4a3e921b" >
 		<file:read doc:name="Read" doc:id="db44f354-60f6-4f97-be80-398c70764820" path="#[vars.fpath[0]]" config-ref="File_Config"/>
-		<ee:transform doc:name="Transform Message" doc:id="81e5f5bc-bf3d-46d5-9587-e79fa6999254" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
-import toBase64 from dw::core::Binaries
-output application/java
----
-toBase64(payload)]]></ee:set-payload>
-			</ee:message>
-			<ee:variables >
-				<ee:set-variable variableName="fileTitle" ><![CDATA[%dw 2.0
-output application/java
----
-vars.title[0]]]></ee:set-variable>
-				<ee:set-variable variableName="filePath" ><![CDATA[%dw 2.0
-output application/java
----
-vars.fpath[0]]]></ee:set-variable>
-			</ee:variables>
-		</ee:transform>
 		<ee:transform doc:name="Transform Message" doc:id="12dd9beb-fafc-492c-8e6a-6a228735ea14" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
-import * from dw::core::Binaries
 output multipart/form-data
 boundary = 'boundary_string'
 ---
@@ -84,19 +64,19 @@ boundary = 'boundary_string'
 				"Content-Type": "application/json"
 			},
 			content: {
-				"Title": vars.fileTitle,
-				"PathOnClient": vars.filePath
+				"Title": vars.title[0],
+				"PathOnClient": vars.fpath[0]
 			}
 		},
 		VersionData: {
 			headers: {
 				"Content-Disposition": {
 					"name": "VersionData",
-					"filename": vars.fileTitle
+					"filename": vars.title[0]
 				},
 				"Content-Type": "application/octet-stream"
 			},
-			content: fromBase64(payload)
+			content: payload
 		}
 	}
 }]]></ee:set-payload>
@@ -124,6 +104,20 @@ output application/x-www-form-urlencoded
 		<http:request method="POST" doc:name="Request" doc:id="afc2f45f-e3f2-4965-a47e-3767a5a5b1d8" config-ref="HTTP_Auth_Request_configuration" path="/services/oauth2/token">
 		</http:request>
 		<logger level="INFO" doc:name="Logger" doc:id="774add3c-7a89-4318-b86f-5876c84500f2" message="Auth sucess"/>
+		<ee:transform doc:name="Transform Message" doc:id="a34b45e9-7162-488c-95d2-2caa86e05051" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="authToken" ><![CDATA[%dw 2.0
+output application/java
+---
+'Bearer '++ payload.access_token]]></ee:set-variable>
+				<ee:set-variable variableName="souceUrl" ><![CDATA[%dw 2.0
+output application/java
+---
+payload.instance_url replace "https://" with("")]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
 		<set-variable value="#['Bearer '++ payload.access_token]" doc:name="Set Variable" doc:id="c92be197-49d8-499e-9659-2ba169f9b4bc" variableName="authToken"/>
 	</flow>
 </mule>

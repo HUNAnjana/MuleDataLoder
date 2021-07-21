@@ -11,7 +11,7 @@ http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/htt
 	</http:request-config>
 	<configuration-properties doc:name="Configuration properties" doc:id="f023108b-4c7d-41cd-be6a-544ced4bca29" file="${env}.properties" />
 	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="f7c05aed-952d-4f30-ba0b-18d9ea6126a7" responseTimeout="500000">
-		<http:request-connection host="${http.client.host}" connectionIdleTimeout="999999999" protocol="HTTPS"/>
+		<http:request-connection host="#[vars.souceUrl]" connectionIdleTimeout="3000000" protocol="HTTPS"/>
 	</http:request-config>
 	<global-property doc:name="Global Property" doc:id="eb0ea549-ee28-4d93-bfa8-abcb201be07d" name="env" value="local" />
 </mule>
